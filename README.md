@@ -10,6 +10,8 @@ attribution, and estimated cost.
 
 Built on Cloudflare Workers, D1, Hono, and React.
 
+A hosted instance runs at **[tryrekon.com](https://tryrekon.com)**.
+
 ## Features
 
 - **Zero added latency** — responses stream straight through; recording happens

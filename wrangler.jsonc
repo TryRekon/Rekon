@@ -9,7 +9,10 @@
   // you control — wrangler provisions the DNS record + cert for it on deploy, so
   // the value here only works on this project's Cloudflare account. Drop the
   // `routes` line entirely to deploy to a free <name>.<subdomain>.workers.dev URL.
-  "routes": [{ "pattern": "profiler.getrekon.com", "custom_domain": true }],
+  "routes": [
+    { "pattern": "profiler.getrekon.com", "custom_domain": true },
+    { "pattern": "tryrekon.com", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   },
