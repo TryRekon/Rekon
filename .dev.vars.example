@@ -1,0 +1,25 @@
+# Copy to .dev.vars for local development (`npm run dev` picks it up), then
+# run `npm run typegen` so worker-configuration.d.ts includes these bindings.
+# Providers are optional — leave a client id empty to disable that sign-in.
+#
+# Google OAuth client (https://console.cloud.google.com/apis/credentials):
+# authorized redirect URI must include http://localhost:5173/_auth/google
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# GitHub OAuth App (https://github.com/settings/developers):
+# authorization callback URL must be http://localhost:5173/_auth/github
+# (one callback per OAuth App — use a separate app for production)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# Signs the session cookie JWT — generate one: openssl rand -base64 32
+SESSION_SECRET=dev-session-secret
+
+# Optional comma-separated sign-in allowlist; leave empty for open signup
+ALLOWED_EMAILS=
+
+# PostHog project API key (phc_...) for the Worker's server-side analytics —
+# public, write-only ingest key. Set in production with `wrangler secret put
+# POSTHOG_KEY`. Leave empty to disable server-side capture.
+POSTHOG_KEY=

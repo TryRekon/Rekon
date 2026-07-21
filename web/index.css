@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f7fa;
+  --foreground: #17151f;
+  --card: #ffffff;
+  --card-foreground: #17151f;
+  --secondary-ink: #4e4a63;
+  --muted: #efeef5;
+  --muted-foreground: #676279;
+  --border: #e5e3ee;
+  --accent: #edecf6;
+  --accent-foreground: #17151f;
+  --ring: #5f4fd8;
+  --radius: 0.625rem;
+  --gridline: #eae9f2;
+  --axis: #cfccdd;
+  --chart-input: #4f63e0;
+  --chart-output: #17a877;
+  --chart-cache-read: #dd9a20;
+  --chart-cache-write: #a44fd0;
+  --status-good: #148a52;
+  --status-serious: #dc7333;
+  --status-critical: #cf3d5e;
+  --status-critical-foreground: #fafafa;
+  /* Context memory bands, in stack order (neutral, defs, results, user,
+     assistant) — order and steps validated for CVD separation per mode;
+     purple and blue are never adjacent. */
+  --flame-neutral: #716c85;
+  --flame-defs: #a44fd0;
+  --flame-results: #dd9a20;
+  --flame-user: #4f63e0;
+  --flame-assistant: #17a877;
+  /* Compare mode's two-run encoding: A = muted reference gray, B = accent.
+     Pair validated for CVD separation and 3:1 surface contrast per mode. */
+  --run-a: #716c85;
+  --run-b: #5f4fd8;
+  --sidebar: #13111c;
+  --sidebar-foreground: #9d99b3;
+  --sidebar-bright: #f4f2fb;
+  --sidebar-muted: #7c7794;
+  --sidebar-hover: rgba(244, 242, 251, 0.06);
+  --sidebar-active: rgba(244, 242, 251, 0.1);
+  --sidebar-border: rgba(244, 242, 251, 0.08);
+  --logo-mark: #0e0c15;
+  --logo-stroke: #8f7dff;
+  --scrim: rgba(12, 10, 22, 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e0c15;
+    --foreground: #f2f0fa;
+    --card: #17141f;
+    --card-foreground: #f2f0fa;
+    --secondary-ink: #cfcbdd;
+    --muted: #211d2e;
+    --muted-foreground: #9b96b2;
+    --border: rgba(240, 238, 252, 0.1);
+    --accent: #211d2e;
+    --accent-foreground: #f2f0fa;
+    --ring: #8f7dff;
+    --gridline: #211d2e;
+    --axis: #3a3552;
+    --chart-input: #7a8bff;
+    --chart-output: #2fbf8a;
+    --chart-cache-read: #e0a63c;
+    --chart-cache-write: #c07ae8;
+    --status-good: #22b573;
+    --status-serious: #e08a45;
+    --status-critical: #e3557a;
+    /* Dark ink on the brightened rose fill; #fafafa on #e3557a is only 3.4:1. */
+    --status-critical-foreground: #17151f;
+    --flame-neutral: #8f8aa6;
+    --flame-defs: #c07ae8;
+    --flame-results: #e0a63c;
+    --flame-user: #7a8bff;
+    --flame-assistant: #2fbf8a;
+    --run-a: #8f8aa6;
+    --run-b: #8f7dff;
+    --sidebar: #12101a;
+  }
+}
+
+@theme inline {
+  --color-*: initial;
+  --font-sans: "Switzer", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-secondary-ink: var(--secondary-ink);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-gridline: var(--gridline);
+  --color-axis: var(--axis);
+  --color-chart-input: var(--chart-input);
+  --color-chart-output: var(--chart-output);
+  --color-chart-cache-read: var(--chart-cache-read);
+  --color-chart-cache-write: var(--chart-cache-write);
+  --color-status-good: var(--status-good);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-foreground: var(--status-critical-foreground);
+  --color-run-a: var(--run-a);
+  --color-run-b: var(--run-b);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-bright: var(--sidebar-bright);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-logo-mark: var(--logo-mark);
+  --color-logo-stroke: var(--logo-stroke);
+  --color-scrim: var(--scrim);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --animate-fade-rise: fade-rise 0.35s ease-out both;
+
+  @keyframes fade-rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

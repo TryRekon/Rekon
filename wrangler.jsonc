@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "token-profiler",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  // This file is committed. Forking a deployment means editing it in place:
+  // replace `database_id` below with your own (`wrangler d1 create
+  // token-profiler-db`), and change or remove the custom-domain route to a zone
+  // you control — wrangler provisions the DNS record + cert for it on deploy, so
+  // the value here only works on this project's Cloudflare account. Drop the
+  // `routes` line entirely to deploy to a free <name>.<subdomain>.workers.dev URL.
+  "routes": [{ "pattern": "profiler.getrekon.com", "custom_domain": true }],
+  "observability": {
+    "enabled": true
+  },
+  // Asset output is managed by the Cloudflare Vite plugin — no "directory" here.
+  // run_worker_first keeps the proxy + internal routes ahead of SPA fallback:
+  // browser navigations to unknown paths get index.html, API traffic never does.
+  // `/s/*` is the system-scoped ingest prefix (…/s/<uuid>/v1/… or
+  // …/s/<uuid>/openai/v1/…); bare `/openai/*` stays worker-first so a
+  // misconfigured client gets a JSON rejection, not index.html. The SPA's own
+  // `/systems/*` route is distinct and still served index.html by the fallback.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/v1/*", "/_*", "/s/*", "/openai/*"]
+  },
+  // Secrets live outside this file: locally in .dev.vars (see .dev.vars.example),
+  // in production via `wrangler secret put` for each of GOOGLE_CLIENT_ID,
+  // GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, SESSION_SECRET,
+  // and POSTHOG_KEY. A provider is enabled only when both its id and secret are
+  // set. ALLOWED_EMAILS is an optional comma-separated sign-in allowlist; empty
+  // means any account on an enabled provider may sign in.
+  // POSTHOG_KEY is a public, write-only PostHog ingest key (the SPA ships the
+  // same value via VITE_POSTHOG_KEY) — it's a `wrangler secret` to keep the
+  // phc_ string out of this committed file, not because it's secret. POSTHOG_HOST
+  // is the non-secret ingest region and stays a plain var here.
+  "vars": {
+    "ALLOWED_EMAILS": "",
+    "POSTHOG_HOST": "https://us.i.posthog.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "token-profiler-db",
+      "database_id": "ef6cac0b-5dbd-482b-a60d-6b0ee08f41f5",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

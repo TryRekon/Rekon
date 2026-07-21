@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TokenProfiler Design System — Iris</title>
+<link rel="preconnect" href="https://api.fontshare.com" />
+<link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+<link href="https://api.fontshare.com/v2/css?f[]=switzer@400,500,600,700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+/* GENERATED REFERENCE — token values mirror web/index.css (the source of
+   truth). If this page and web/index.css disagree, regenerate this page. */
+:root {
+  --background: #f7f7fa;
+  --foreground: #17151f;
+  --card: #ffffff;
+  --card-foreground: #17151f;
+  --secondary-ink: #4e4a63;
+  --muted: #efeef5;
+  --muted-foreground: #676279;
+  --border: #e5e3ee;
+  --accent: #edecf6;
+  --accent-foreground: #17151f;
+  --ring: #5f4fd8;
+  --radius: 0.625rem;
+  --gridline: #eae9f2;
+  --axis: #cfccdd;
+  --chart-input: #4f63e0;
+  --chart-output: #17a877;
+  --chart-cache-read: #dd9a20;
+  --chart-cache-write: #a44fd0;
+  --status-good: #148a52;
+  --status-serious: #dc7333;
+  --status-critical: #cf3d5e;
+  --status-critical-foreground: #fafafa;
+  --flame-neutral: #716c85;
+  --flame-defs: #a44fd0;
+  --flame-results: #dd9a20;
+  --flame-user: #4f63e0;
+  --flame-assistant: #17a877;
+  --run-a: #716c85;
+  --run-b: #5f4fd8;
+  --sidebar: #13111c;
+  --sidebar-foreground: #9d99b3;
+  --sidebar-bright: #f4f2fb;
+  --sidebar-muted: #7c7794;
+  --sidebar-hover: rgba(244, 242, 251, 0.06);
+  --sidebar-active: rgba(244, 242, 251, 0.1);
+  --sidebar-border: rgba(244, 242, 251, 0.08);
+  --logo-mark: #0e0c15;
+  --logo-stroke: #8f7dff;
+  --scrim: rgba(12, 10, 22, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e0c15;
+    --foreground: #f2f0fa;
+    --card: #17141f;
+    --card-foreground: #f2f0fa;
+    --secondary-ink: #cfcbdd;
+    --muted: #211d2e;
+    --muted-foreground: #9b96b2;
+    --border: rgba(240, 238, 252, 0.1);
+    --accent: #211d2e;
+    --accent-foreground: #f2f0fa;
+    --ring: #8f7dff;
+    --gridline: #211d2e;
+    --axis: #3a3552;
+    --chart-input: #7a8bff;
+    --chart-output: #2fbf8a;
+    --chart-cache-read: #e0a63c;
+    --chart-cache-write: #c07ae8;
+    --status-good: #22b573;
+    --status-serious: #e08a45;
+    --status-critical: #e3557a;
+    --status-critical-foreground: #17151f;
+    --flame-neutral: #8f8aa6;
+    --flame-defs: #c07ae8;
+    --flame-results: #e0a63c;
+    --flame-user: #7a8bff;
+    --flame-assistant: #2fbf8a;
+    --run-a: #8f8aa6;
+    --run-b: #8f7dff;
+    --sidebar: #12101a;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 40px 32px 80px;
+  background: var(--background); color: var(--foreground);
+  font-family: "Switzer", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; line-height: 1.5;
+}
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+/* Entity-link pattern: entity-name links in tables/lists render in the accent. */
+a.entity-link { color: var(--ring); text-decoration: none; text-underline-offset: 2px; }
+a.entity-link:hover { text-decoration: underline; }
+.wrap { max-width: 1000px; margin: 0 auto; }
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 4px; }
+.sub { color: var(--muted-foreground); margin: 0 0 40px; font-size: 14px; }
+h2 { font-size: 15px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 48px 0 20px; }
+section { scroll-margin-top: 20px; }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.sw { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--card); }
+.sw .chip { height: 52px; }
+.sw .meta { padding: 8px 10px; font-size: 11px; }
+.sw .meta b { display: block; font-weight: 600; }
+.sw .meta span { color: var(--muted-foreground); font-size: 10px; }
+
+.type-row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--gridline); }
+.type-row small { width: 190px; flex: none; color: var(--muted-foreground); font-size: 11px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--card); color: var(--card-foreground);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px;
+}
+.card h3 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+.card .desc { color: var(--muted-foreground); font-size: 12px; margin: 0 0 12px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+  border-radius: calc(var(--radius) - 2px); padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.btn:hover { background: var(--accent); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.ghost:hover { background: var(--accent); }
+.btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--muted); color: var(--secondary-ink); }
+.badge.outline { background: transparent; border: 1px solid var(--border); }
+.badge.good { background: color-mix(in srgb, var(--status-good) 10%, transparent); color: var(--status-good); }
+.badge.serious { background: color-mix(in srgb, var(--status-serious) 10%, transparent); color: var(--status-serious); }
+.badge.critical { background: color-mix(in srgb, var(--status-critical) 10%, transparent); color: var(--status-critical); }
+
+.input {
+  width: 100%; font: inherit; font-size: 13px; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: calc(var(--radius) - 2px);
+  background: var(--card); color: var(--foreground);
+}
+.input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.input.error { border-color: var(--status-critical); }
+
+table.ref { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.ref th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted-foreground); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table.ref td { padding: 8px 10px; border-bottom: 1px solid var(--gridline); }
+table.ref th.r, table.ref td.r { text-align: right; font-variant-numeric: tabular-nums; }
+table.ref td.r { font-family: "JetBrains Mono", monospace; font-size: 12px; }
+
+.sidebar-demo {
+  background: var(--sidebar); border-radius: var(--radius); padding: 16px 12px;
+  width: 200px; display: flex; flex-direction: column; gap: 2px;
+}
+.sidebar-demo .brand { color: var(--sidebar-bright); font-weight: 700; font-size: 13px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+.sidebar-demo a { color: var(--sidebar-foreground); font-size: 13px; text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+.sidebar-demo a.active { color: var(--sidebar-bright); background: var(--sidebar-active); }
+.sidebar-demo a:hover { background: var(--sidebar-hover); }
+.sidebar-demo .lbl { color: var(--sidebar-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; margin: 10px 10px 4px; }
+
+.bars { display: flex; gap: 10px; align-items: flex-end; height: 90px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.bars i { display: block; width: 34px; border-radius: 3px 3px 0 0; }
+.legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted-foreground); margin-top: 8px; flex-wrap: wrap; }
+.legend span { display: inline-flex; gap: 5px; align-items: center; }
+.legend b { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.flame-demo { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TokenProfiler — Iris</h1>
+  <p class="sub">Graphite neutrals with a violet undertone · electric iris accent on chrome only · Switzer + JetBrains Mono · this page renders from the same token values as <span class="mono">web/index.css</span> and follows your OS light/dark preference.</p>
+
+  <section id="colors">
+    <h2>Color tokens</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--background)"></div><div class="meta"><b>background</b><span>page ground</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--card)"></div><div class="meta"><b>card</b><span>panels</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--foreground)"></div><div class="meta"><b>foreground</b><span>primary ink</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--secondary-ink)"></div><div class="meta"><b>secondary-ink</b><span>secondary text</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--muted)"></div><div class="meta"><b>muted</b><span>subtle surface</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--muted-foreground)"></div><div class="meta"><b>muted-foreground</b><span>tertiary text</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--border)"></div><div class="meta"><b>border</b><span>hairlines</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--accent)"></div><div class="meta"><b>accent</b><span>hover surface</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--ring)"></div><div class="meta"><b>ring</b><span>focus / iris accent</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--chart-input)"></div><div class="meta"><b>chart-input</b><span>input tokens</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--chart-output)"></div><div class="meta"><b>chart-output</b><span>output tokens</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--chart-cache-read)"></div><div class="meta"><b>chart-cache-read</b><span>cache reads</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--chart-cache-write)"></div><div class="meta"><b>chart-cache-write</b><span>cache writes</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-good)"></div><div class="meta"><b>status-good</b><span>healthy</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-serious)"></div><div class="meta"><b>status-serious</b><span>warning</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--status-critical)"></div><div class="meta"><b>status-critical</b><span>critical</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--sidebar)"></div><div class="meta"><b>sidebar</b><span>fixed-dark nav</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--run-a)"></div><div class="meta"><b>run-a</b><span>compare: reference</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--run-b)"></div><div class="meta"><b>run-b</b><span>compare: accent</span></div></div>
+      <div class="sw"><div class="chip" style="background:var(--logo-stroke)"></div><div class="meta"><b>logo-stroke</b><span>brand mark</span></div></div>
+    </div>
+  </section>
+
+  <section id="typography">
+    <h2>Typography</h2>
+    <div class="type-row"><small>Switzer 700 / 24px — page title</small><div style="font-size:24px;font-weight:700;letter-spacing:-0.02em">Costs by model</div></div>
+    <div class="type-row"><small>Switzer 600 / 15px — card title</small><div style="font-size:15px;font-weight:600">Total spend · last 7 days</div></div>
+    <div class="type-row"><small>Switzer 400 / 13px — body</small><div style="font-size:13px">Sessions are rebuilt proxy-side from client keys and content chains.</div></div>
+    <div class="type-row"><small>Switzer 400 / 12px — caption</small><div style="font-size:12px;color:var(--muted-foreground)">Ordered by input + output tokens · cost from list prices</div></div>
+    <div class="type-row"><small>JetBrains Mono 500 / 22px — metric</small><div class="mono" style="font-size:22px;font-weight:500;font-variant-numeric:tabular-nums">$482.16</div></div>
+    <div class="type-row"><small>JetBrains Mono 400 / 12px — table numeral</small><div class="mono" style="font-size:12px;font-variant-numeric:tabular-nums">4,182,930</div></div>
+    <div class="type-row"><small>JetBrains Mono 400 / 12px — model id</small><div class="mono" style="font-size:12px">claude-fable-5</div></div>
+  </section>
+
+  <section id="components">
+    <h2>Components</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Buttons &amp; badges</h3>
+        <p class="desc">outline (default) · ghost · focus ring uses the iris accent</p>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px">
+          <button class="btn">Add system</button>
+          <button class="btn ghost">Cancel</button>
+        </p>
+        <p style="display:flex;gap:8px;flex-wrap:wrap;margin:0">
+          <span class="badge">secondary</span>
+          <span class="badge outline">outline</span>
+          <span class="badge good">within budget</span>
+          <span class="badge serious">near limit</span>
+          <span class="badge critical">over budget</span>
+        </p>
+      </div>
+      <div class="card">
+        <h3>Inputs</h3>
+        <p class="desc">default · focus (iris ring) · error (status-critical border)</p>
+        <p style="margin:0 0 10px"><input class="input" placeholder="System name" /></p>
+        <p style="margin:0"><input class="input error" value="not-a-valid-url" aria-invalid="true" /></p>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="card" style="padding:0">
+        <div style="padding:16px 18px 0"><h3>Cost by model</h3><p class="desc">entity names link in the accent; token numerals in mono, ink not accent</p></div>
+        <table class="ref">
+          <tr><th>Model</th><th class="r">Input</th><th class="r">Est. cost</th><th>Status</th></tr>
+          <tr><td class="mono" style="font-size:12px"><a class="entity-link" href="#">claude-fable-5</a></td><td class="r">4,182,930</td><td class="r" style="font-weight:600">$261.40</td><td><span class="badge good">within budget</span></td></tr>
+          <tr><td class="mono" style="font-size:12px"><a class="entity-link" href="#">claude-opus-4-8</a></td><td class="r">2,914,001</td><td class="r" style="font-weight:600">$168.03</td><td><span class="badge serious">near limit</span></td></tr>
+          <tr><td class="mono" style="font-size:12px"><a class="entity-link" href="#">gpt-4o</a></td><td class="r">1,506,822</td><td class="r" style="font-weight:600">$52.73</td><td><span class="badge critical">over budget</span></td></tr>
+        </table>
+      </div>
+      <div class="sidebar-demo">
+        <span class="brand"><svg width="16" height="16" viewBox="0 0 16 16"><rect width="16" height="16" rx="3" fill="var(--logo-mark)"/><path d="M4 11V7.5M8 11V5M12 11V8.5" stroke="var(--logo-stroke)" stroke-width="2" stroke-linecap="round"/></svg>TokenProfiler</span>
+        <a class="active" href="#components">Dashboard</a>
+        <a href="#components">Costs</a>
+        <a href="#components">Sessions</a>
+        <a href="#components">Tools</a>
+        <span class="lbl">Systems</span>
+        <a href="#components">production</a>
+        <a href="#components">staging</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="charts">
+    <h2>Chart encodings</h2>
+    <div class="bars" role="img" aria-label="Token usage bar sample">
+      <i style="height:70%;background:var(--chart-input)"></i>
+      <i style="height:45%;background:var(--chart-output)"></i>
+      <i style="height:85%;background:var(--chart-cache-read)"></i>
+      <i style="height:30%;background:var(--chart-cache-write)"></i>
+      <i style="height:55%;background:var(--run-a)"></i>
+      <i style="height:65%;background:var(--run-b)"></i>
+    </div>
+    <div class="legend">
+      <span><b style="background:var(--chart-input)"></b>Input</span>
+      <span><b style="background:var(--chart-output)"></b>Output</span>
+      <span><b style="background:var(--chart-cache-read)"></b>Cache read</span>
+      <span><b style="background:var(--chart-cache-write)"></b>Cache write</span>
+      <span><b style="background:var(--run-a)"></b>Run A</span>
+      <span><b style="background:var(--run-b)"></b>Run B</span>
+    </div>
+    <div class="flame-demo" role="img" aria-label="Context memory bands in stack order">
+      <div style="flex:2;background:var(--flame-neutral)"></div>
+      <div style="flex:3;background:var(--flame-defs)"></div>
+      <div style="flex:4;background:var(--flame-results)"></div>
+      <div style="flex:2;background:var(--flame-user)"></div>
+      <div style="flex:3;background:var(--flame-assistant)"></div>
+    </div>
+    <div class="legend">
+      <span><b style="background:var(--flame-neutral)"></b>neutral</span>
+      <span><b style="background:var(--flame-defs)"></b>defs</span>
+      <span><b style="background:var(--flame-results)"></b>results</span>
+      <span><b style="background:var(--flame-user)"></b>user</span>
+      <span><b style="background:var(--flame-assistant)"></b>assistant</span>
+      <span style="margin-left:auto">CVD stack order preserved — purple and blue never adjacent</span>
+    </div>
+  </section>
+</div>
+</body>
+</html>
