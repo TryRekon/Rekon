@@ -12,6 +12,7 @@ import { ComparePage } from './pages/compare'
 import { CostsPage } from './pages/costs'
 import { DashboardPage } from './pages/dashboard'
 import { LandingPage } from './pages/landing'
+import { LoginPage } from './pages/login'
 import { PreviewPage } from './pages/preview'
 import { SessionPage } from './pages/session'
 import { SystemPage } from './pages/system'
@@ -288,8 +289,10 @@ export const App = () => {
   // or the read-only sample-data preview for a seeded draft. Checked before the
   // claim gate, so a signed-out draft holder never hits it.
   if (me === null) {
-    const previewId = pathnameOf(path).match(/^\/preview\/([^/]+)\/?$/)?.[1]
+    const pathname = pathnameOf(path)
+    const previewId = pathname.match(/^\/preview\/([^/]+)\/?$/)?.[1]
     if (previewId) return <PreviewPage id={decodeURIComponent(previewId)} />
+    if (pathname === '/login') return <LoginPage />
     return <LandingPage />
   }
 
