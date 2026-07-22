@@ -29,11 +29,27 @@ npm run db:migrate:remote
 npm run verify-ui        # THE gate before any UI change lands: typecheck + both design lints
 npm run lint:design      # ESLint (better-tailwindcss): unknown classes, arbitrary/raw colors in TSX
 npm run lint:style       # Stylelint: raw color values in CSS outside web/index.css
+
+npm test                 # Vitest: run both projects (unit + worker) once
+npm run test:unit        # only the pure-function unit project (fast, no bindings)
+npm run test:worker      # only the workerd/D1 integration project
+npm run test:watch       # Vitest watch mode
+npm run typecheck:test   # typecheck the test/ tree (its own tsconfig)
+npm run verify           # THE full local gate: verify-ui + typecheck:test + npm test
 ```
 
-There is **no test runner**; static checks are `npm run typecheck` plus the design-scoped lint
-gates above (`verify-ui` runs all of them and exits non-zero on any violation — run it after
-any change under `web/`). Lint is deliberately scoped to design rules only; there is no
+**Tests** live under `test/` and run on Vitest with two projects (`vitest.config.ts`):
+`test/unit/**` are pure-function tests (pricing, session-signal extraction, the
+response↔replay chain-key invariant, token estimation) in plain node; `test/integration/**`
+boot the whole Worker inside workerd via `@cloudflare/vitest-pool-workers` against a real,
+per-file-isolated D1 with the actual `migrations/` applied — covering routing, open-relay
+closure, auth, and multi-tenant fencing through `SELF.fetch`/`persistUsage`. `npm run verify`
+is the single command that proves the repo still works locally (it composes the UI gate, the
+test-tree typecheck, and both test projects, exiting non-zero on any failure).
+
+`npm run verify` needs a `.dev.vars` present so `wrangler types` emits the secret-typed `Env`
+(SESSION_SECRET etc.) that `src/` typechecks against — copy `.dev.vars.example` to `.dev.vars`
+on a fresh checkout. Lint is deliberately scoped to design rules only; there is no
 general-purpose linter.
 
 A PreToolUse hook (`.claude/hooks/escape-hatch-guard.sh`, wired in `.claude/settings.json`)
