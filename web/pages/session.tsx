@@ -65,15 +65,27 @@ const layoutTree = (turns: SessionTurn[]): TreeRow[] => {
   for (const list of children.values()) list.sort((a, b) => a.createdAt - b.createdAt)
 
   const rows: TreeRow[] = []
+  const emitted = new Set<number>()
   const walk = (parentKey: number | null, depth: number) => {
     const kids = children.get(parentKey) ?? []
     kids.forEach((turn, i) => {
+      // Guard against a parent cycle or a duplicate id re-walking a subtree.
+      if (emitted.has(turn.id)) return
+      emitted.add(turn.id)
       const forked = i > 0
       rows.push({ turn, index: indexOf.get(turn.id) ?? 0, depth: forked ? depth + 1 : depth, isFork: forked })
       walk(turn.id, forked ? depth + 1 : depth)
     })
   }
   walk(null, 0)
+  // Any turn not reached from a root (only possible under a parent cycle among
+  // present turns) is surfaced as its own root so no recorded turn is dropped.
+  for (const t of turns) {
+    if (emitted.has(t.id)) continue
+    emitted.add(t.id)
+    rows.push({ turn: t, index: indexOf.get(t.id) ?? 0, depth: 0, isFork: false })
+    walk(t.id, 0)
+  }
   return rows
 }
 
@@ -105,7 +117,6 @@ const SessionTree = ({
     <div className="flex items-baseline justify-between border-b border-border px-5 py-3">
       <span className="text-[12px] font-semibold text-foreground">Conversation tree</span>
       <span className="flex gap-3 text-[11px] text-secondary-ink">
-        <LegendDot color="var(--flame-user)" label="user" />
         <LegendDot color="var(--flame-assistant)" label="assistant" />
         <LegendDot color="var(--flame-results)" label="tool" />
       </span>
@@ -154,7 +165,7 @@ const TreeNode = ({
       aria-pressed={selected}
       style={{ marginLeft: row.depth * 18 }}
       className={cn(
-        'flex w-full items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors',
+        'flex w-full items-start gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
         selected ? 'bg-muted' : 'hover:bg-muted/60',
       )}
     >
@@ -167,7 +178,7 @@ const TreeNode = ({
         <span className="flex items-baseline gap-2">
           <span className="font-mono text-[11px] text-muted-foreground">#{row.index}</span>
           {row.isFork && (
-            <span className="rounded-[4px] bg-run-b/10 px-1 py-px font-mono text-[9px] font-medium tracking-[0.08em] text-ring uppercase">
+            <span className="rounded-[4px] bg-muted px-1 py-px font-mono text-[9px] font-medium tracking-[0.08em] text-secondary-ink uppercase">
               fork
             </span>
           )}
@@ -210,7 +221,7 @@ const TurnDetail = ({ turn, index }: { turn: SessionTurn; index: number }) => {
         <h4 className="text-[13px] font-semibold">
           Turn {index} · assistant
         </h4>
-        <span className="rounded-[5px] bg-status-good/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.1em] text-status-good uppercase">
+        <span className="rounded-[5px] bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-[0.1em] text-secondary-ink uppercase">
           selected
         </span>
       </div>
@@ -246,7 +257,7 @@ const TurnDetail = ({ turn, index }: { turn: SessionTurn; index: number }) => {
   )
 }
 
-// ── Context growth (cumulative prompt tokens across turns) ────────────────────
+// ── Context growth (per-turn prompt-token context size across turns) ─────────
 
 const ContextGrowth = ({ turns }: { turns: SessionTurn[] }) => {
   const W = 380
@@ -272,7 +283,7 @@ const ContextGrowth = ({ turns }: { turns: SessionTurn[] }) => {
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label="Cumulative prompt-token context size across turns"
+          aria-label="Prompt-token context size for each turn, in order"
           className="mt-3 h-[120px] w-full"
         >
           <path d={area} fill="var(--ring)" opacity="0.08" />
@@ -382,7 +393,7 @@ export const SessionPage = ({ id }: { id: string }) => {
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="text-xs font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                  className="rounded-sm text-xs font-medium text-muted-foreground underline-offset-2 outline-none transition-colors hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   {data.session.name ? 'Rename' : 'Name session'}
                 </button>
@@ -393,7 +404,7 @@ export const SessionPage = ({ id }: { id: string }) => {
                       `/systems/${encodeURIComponent(data.session.systemId)}/compare?a=${encodeURIComponent(data.session.id)}`,
                     )
                   }
-                  className="text-xs font-medium text-ring underline-offset-2 transition-colors hover:underline"
+                  className="rounded-sm text-xs font-medium text-ring underline-offset-2 outline-none transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                 >
                   Compare…
                 </button>

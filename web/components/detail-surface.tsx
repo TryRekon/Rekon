@@ -13,7 +13,11 @@ import { cn } from '../lib/utils'
  * `bg-card`), which is correct at any column/row count with no nth-child
  * arithmetic (the technique the dashboard's KPI row settled on). The table
  * primitives mirror attribution-columns' `thClass`/`tdBase`/`numCell`/`RowBar`
- * so both detail pages read as one system with the dashboard.
+ * so both detail pages read as one system with the dashboard. They are a
+ * deliberate local copy, not an import from attribution-columns: that module
+ * ships in the already-merged dashboard with private primitives, so routing it
+ * through here would restyle a shipped surface. `ColHeader` intentionally uses
+ * `font-sans` — this artifact's column headers are Switzer `.lbl`, not mono.
  */
 
 // ── Surface shell ──────────────────────────────────────────────────────────
@@ -87,19 +91,22 @@ export const DetailHeader = ({
 
 // ── Glance strip (gstrip): a spend hero + up to four flat KPI cells ─────────
 
-export interface GlanceCell {
+interface GlanceCell {
   label: string
   value: ReactNode
 }
 
 // Splits a USD amount into a whole-dollar head and a de-emphasized cents tail
 // for the hero figure ($412 + .33), matching the artifact's two-weight numeral.
-export const splitUsd = (n: number | null): { whole: string; cents: string } => {
+// Round to integer cents FIRST, then split — rounding the fraction alone lets a
+// value like 4.999 render "$4.100" instead of carrying into "$5.00".
+const splitUsd = (n: number | null): { whole: string; cents: string } => {
   if (n === null) return { whole: '—', cents: '' }
-  const cents = Math.round((n - Math.trunc(n)) * 100)
+  const cents = Math.round(Math.abs(n) * 100)
+  const sign = n < 0 ? '-' : ''
   return {
-    whole: `$${new Intl.NumberFormat('en-US').format(Math.trunc(n))}`,
-    cents: `.${String(cents).padStart(2, '0')}`,
+    whole: `${sign}$${new Intl.NumberFormat('en-US').format(Math.trunc(cents / 100))}`,
+    cents: `.${String(cents % 100).padStart(2, '0')}`,
   }
 }
 
@@ -150,7 +157,7 @@ export const Unit = ({ children }: { children: ReactNode }) => (
 
 // ── Dense table primitives (mirror of attribution-columns) ──────────────────
 
-export const thClass = (align: 'text-left' | 'text-right') =>
+const thClass = (align: 'text-left' | 'text-right') =>
   cn(
     'border-b border-hairline px-4 pt-2.5 pb-1.5 font-sans text-[9px] font-semibold tracking-[0.13em] uppercase text-muted-foreground md:px-[18px]',
     align,

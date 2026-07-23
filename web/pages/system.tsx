@@ -36,8 +36,10 @@ const modelTokens = (m: ModelBucket) =>
 const posDenom = (n: number) => (n > 0 ? n : 1)
 const costOrNeg = (c: number | null) => (c === null ? -1 : c)
 
-// Fraction of the prompt served from cache, over the system's lifetime token
-// sums — the same read/(input+read+write) ratio the dashboard reports.
+// Fraction of the prompt served from cache = read / (input + read + write), the
+// same write-inclusive prompt-cache ratio the Session page reports via
+// insights.hitRate. (Note: dashboard-metrics.cacheHitRatio excludes cache
+// writes, so this can differ from the dashboard's headline hit-rate by design.)
 const cacheHit = (s: SystemSummary): number => {
   const prompt = s.inputTokens + s.cacheReadTokens + s.cacheCreationTokens
   return prompt > 0 ? s.cacheReadTokens / prompt : 0
@@ -47,7 +49,7 @@ const cacheHit = (s: SystemSummary): number => {
 // provider set is derived (backed), not a stored field.
 const providerOf = (model: string): string => {
   if (model.startsWith('claude')) return 'Anthropic'
-  if (model.startsWith('gpt') || model.startsWith('o1') || model.startsWith('o3')) return 'OpenAI'
+  if (/^(gpt|o1|o3|o4)/.test(model)) return 'OpenAI'
   return 'Other'
 }
 const providersFrom = (byModel: ModelBucket[]): string[] => {
@@ -143,7 +145,7 @@ const CopyChip = ({ text }: { text: string }) => {
         setCopied(true)
         setTimeout(() => setCopied(false), 1500)
       }}
-      className="absolute top-2.5 right-2.5 rounded-md border border-sidebar-border bg-sidebar-hover px-2.5 py-1 font-sans text-[10px] font-semibold tracking-[0.06em] text-sidebar-foreground transition-colors hover:text-sidebar-bright"
+      className="absolute top-2.5 right-2.5 rounded-md border border-sidebar-border bg-sidebar-hover px-2.5 py-1 font-sans text-[10px] font-semibold tracking-[0.06em] text-sidebar-foreground transition-colors outline-none hover:text-sidebar-bright focus-visible:outline-2 focus-visible:outline-ring"
     >
       {copied ? 'COPIED' : 'COPY'}
     </button>
@@ -370,7 +372,7 @@ export const SystemPage = ({ id }: { id: string }) => {
           />
 
           <GlanceStrip
-            eyebrow="Est. spend · this period"
+            eyebrow="Est. spend"
             amount={data.system.cost}
             pace={
               // TODO(stitch-gap): SystemDetail has no per-day series, so month-end
