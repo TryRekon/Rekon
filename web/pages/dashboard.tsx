@@ -1,20 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { PendingSystem, RangeKey } from '../../shared/api-types'
+import type { DashboardTotals, PendingSystem, RangeKey } from '../../shared/api-types'
 import { isUnauthorized } from '../lib/api'
 import { queryKeys, useDashboard } from '../lib/queries'
-import { formatRelative, formatTimestamp, formatUsd, formatUtcDay } from '../lib/format'
+import { formatPercent, formatRelative, formatTimestamp } from '../lib/format'
 import { cn } from '../lib/utils'
 import { Link } from '../lib/router'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { StatStrip, StatTile } from '../components/stat-tile'
+import { BurnMeter } from '../components/burn-meter'
+import { tokenMixByCount } from '../lib/dashboard-metrics'
 import { TokensChartCard } from '../components/tokens-chart'
-import {
-  DashboardMetricCard,
-  type DashboardCardPoint,
-} from '../design-system/examples/dashboard-card'
 import { ModelsCard } from '../components/models-card'
 import { ProvidersCard } from '../components/providers-card'
 import { ToolsCard } from '../components/tools-card'
@@ -66,14 +64,65 @@ const PendingSystemCard = ({
   </Card>
 )
 
+// Compact glance-layer strip: token usage split as a single stacked bar, backed
+// by tokenMixByCount (by token count — the API returns counts, not per-type
+// cost). Identity is never color-alone: every segment is named with its label
+// and percent in the legend. Segment colors are dynamic `var(--chart-*)` token
+// refs, so they ride in via inline style per design-system.md §6 (the same
+// JS-literal convention tokens-chart uses for its SVG fills).
+const TokenMixStrip = ({ totals }: { totals: DashboardTotals }) => {
+  const mix = tokenMixByCount(totals)
+  const hasTokens = mix.some((m) => m.share > 0)
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 p-4">
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Token mix · by count
+        </span>
+        {hasTokens ? (
+          <>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+              {mix.map((m) =>
+                m.share > 0 ? (
+                  <div
+                    key={m.key}
+                    style={{ width: `${m.share * 100}%`, backgroundColor: m.color }}
+                    title={`${m.label} ${formatPercent(m.share)}`}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {mix.map((m) => (
+                <span
+                  key={m.key}
+                  className="inline-flex items-center gap-1.5 text-xs text-secondary-ink"
+                >
+                  <span
+                    className="h-2 w-2 rounded-[2px]"
+                    style={{ backgroundColor: m.color }}
+                    aria-hidden="true"
+                  />
+                  {m.label}
+                  <span className="font-mono tabular-nums text-muted-foreground">
+                    {formatPercent(m.share)}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">No token usage recorded in this range.</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export const DashboardPage = () => {
   const [range, setRange] = useState<RangeKey>('30d')
   const { data, error, isFetching, refetch } = useDashboard(range)
   const queryClient = useQueryClient()
-  const spendSeries: DashboardCardPoint[] = useMemo(
-    () => (data ? data.byDay.map((d) => ({ label: formatUtcDay(d.day), value: d.cost ?? 0 })) : []),
-    [data],
-  )
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     void queryClient.invalidateQueries({ queryKey: queryKeys.systems })
@@ -169,6 +218,16 @@ export const DashboardPage = () => {
             <PendingSystemCard key={s.id} system={s} generatedAt={data.generatedAt} />
           ))}
 
+          {/* GLANCE LAYER — the lit read-at-a-distance summary: spend hero,
+              secondary-KPI strip, token-mix. */}
+          <BurnMeter
+            totals={data.totals}
+            byDay={data.byDay}
+            providers={data.providers}
+            range={data.range}
+            generatedAt={data.generatedAt}
+          />
+
           <StatStrip className="grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
             <StatTile label="Requests" value={data.totals.requests} />
             <StatTile label="Sessions" value={data.totals.sessions} />
@@ -180,16 +239,10 @@ export const DashboardPage = () => {
             <StatTile label="Cache write" value={data.totals.cacheCreationTokens} />
           </StatStrip>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <DashboardMetricCard
-              title="Spend trend"
-              description="Estimated cost per day, list prices"
-              value={formatUsd(data.totals.cost)}
-              series={spendSeries}
-              seriesColor="var(--chart-input)"
-            />
-          </div>
+          <TokenMixStrip totals={data.totals} />
 
+          {/* DENSITY LAYER — the instrument body: trend chart then attribution
+              tables, coarse to fine. */}
           <TokensChartCard byDay={data.byDay} range={data.range} generatedAt={data.generatedAt} />
 
           <section className="grid gap-4 lg:grid-cols-5">
