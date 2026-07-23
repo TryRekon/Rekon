@@ -7,6 +7,7 @@
 //   1. tsc --noEmit -p web      -- same as the `typecheck` npm script
 //   2. eslint web               -- same as the `lint:design` npm script
 //   3. stylelint "web/**/*.css" -- same as the `lint:style` npm script
+//   4. check-gap-flags          -- same as the `lint:gaps` npm script
 //
 // Each tool's native output is normalized into one line per violation:
 //   file:line rule message (hint: ...)
@@ -21,6 +22,8 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { findGapViolations } from "./check-gap-flags.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -211,6 +214,34 @@ const stylelintFailed = runJsonTool(
 anyStepFailed = anyStepFailed || stylelintFailed;
 
 // ---------------------------------------------------------------------------
+// Step 4: gap-flag grep gate (same target as `lint:gaps`). Every <Unbacked>
+// JSX site must carry an adjacent TODO(stitch-gap) marker (KTD3/KTD4) so
+// designed-but-unbacked UI stays greppable.
+// ---------------------------------------------------------------------------
+
+let gapCheckFailed = false;
+try {
+  for (const location of findGapViolations()) {
+    gapCheckFailed = true;
+    reportViolation(
+      location,
+      "unbacked-without-todo",
+      "<Unbacked> site missing an adjacent TODO(stitch-gap) marker",
+      "add a // TODO(stitch-gap): <what's missing> comment next to the <Unbacked> tag",
+    );
+  }
+} catch (err) {
+  gapCheckFailed = true;
+  reportViolation(
+    "scripts/check-gap-flags.mjs",
+    "lint:gaps",
+    err.message,
+    "run `npm run lint:gaps` directly to debug",
+  );
+}
+anyStepFailed = anyStepFailed || gapCheckFailed;
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
@@ -224,6 +255,6 @@ if (anyStepFailed) {
   console.log(`\nverify-ui failed in ${runtimeSeconds}s`);
   process.exit(1);
 } else {
-  console.log(`verify-ui passed (typecheck + lint:design + lint:style clean) in ${runtimeSeconds}s`);
+  console.log(`verify-ui passed (typecheck + lint:design + lint:style + lint:gaps clean) in ${runtimeSeconds}s`);
   process.exit(0);
 }

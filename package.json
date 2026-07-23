@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p web",
     "lint:design": "eslint web",
     "lint:style": "stylelint \"web/**/*.css\"",
+    "lint:gaps": "node scripts/check-gap-flags.mjs",
     "verify-ui": "node scripts/verify-ui.mjs",
     "typegen": "wrangler types",
     "db:generate": "drizzle-kit generate",

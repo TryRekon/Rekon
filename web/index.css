@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7fa;
+  --background: #f6f4ef;
   --foreground: #17151f;
-  --card: #ffffff;
+  --card: #fffdf9;
   --card-foreground: #17151f;
-  --secondary-ink: #4e4a63;
-  --muted: #efeef5;
-  --muted-foreground: #676279;
-  --border: #e5e3ee;
-  --accent: #edecf6;
+  --secondary-ink: #4e4a5f;
+  --muted: #f0ede6;
+  --muted-foreground: #6b6675;
+  --border: #e6e1d8;
+  --accent: #efece4;
   --accent-foreground: #17151f;
   --ring: #5f4fd8;
   --radius: 0.625rem;
-  --gridline: #eae9f2;
-  --axis: #cfccdd;
+  --gridline: #ece8df;
+  --axis: #cbc6bb;
   --chart-input: #4f63e0;
   --chart-output: #17a877;
   --chart-cache-read: #dd9a20;
@@ -23,6 +23,11 @@
   --status-serious: #dc7333;
   --status-critical: #cf3d5e;
   --status-critical-foreground: #fafafa;
+  /* Build-state chrome (KTD4): the gap-flag amber for the <Unbacked> primitive.
+     Deliberately NOT a data --status-* color — a build gap must not read as a
+     data "serious" state. Consumed via the `hold` bridge (text-hold /
+     border-hold / bg-hold) and the `hazard` utility below. */
+  --hold: #dc8a2e;
   /* Context memory bands, in stack order (neutral, defs, results, user,
      assistant) — order and steps validated for CVD separation per mode;
      purple and blue are never adjacent. */
@@ -49,19 +54,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0e0c15;
+    --background: #100d0c;
     --foreground: #f2f0fa;
-    --card: #17141f;
+    --card: #1a1715;
     --card-foreground: #f2f0fa;
-    --secondary-ink: #cfcbdd;
-    --muted: #211d2e;
-    --muted-foreground: #9b96b2;
-    --border: rgba(240, 238, 252, 0.1);
-    --accent: #211d2e;
+    --secondary-ink: #cec9c2;
+    --muted: #231f1c;
+    --muted-foreground: #9a968e;
+    --border: rgba(240, 236, 226, 0.1);
+    --accent: #231f1c;
     --accent-foreground: #f2f0fa;
     --ring: #8f7dff;
-    --gridline: #211d2e;
-    --axis: #3a3552;
+    --gridline: #231f1c;
+    --axis: #3c3730;
     --chart-input: #7a8bff;
     --chart-output: #2fbf8a;
     --chart-cache-read: #e0a63c;
@@ -71,6 +76,8 @@
     --status-critical: #e3557a;
     /* Dark ink on the brightened rose fill; #fafafa on #e3557a is only 3.4:1. */
     --status-critical-foreground: #17151f;
+    /* A touch brighter for dark surfaces (mirrors --status-serious's dark lift). */
+    --hold: #e8a44a;
     --flame-neutral: #8f8aa6;
     --flame-defs: #c07ae8;
     --flame-results: #e0a63c;
@@ -107,6 +114,7 @@
   --color-status-serious: var(--status-serious);
   --color-status-critical: var(--status-critical);
   --color-status-critical-foreground: var(--status-critical-foreground);
+  --color-hold: var(--hold);
   --color-run-a: var(--run-a);
   --color-run-b: var(--run-b);
   --color-sidebar: var(--sidebar);
@@ -155,4 +163,16 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Build-state hazard stripes for the <Unbacked> gap-flag primitive (KTD3/KTD4).
+   A subtle warm `--hold` diagonal rule — obviously scaffolding without shouting,
+   staying on the Iris theme. Pair with the dashed `border-hold`/`text-hold`
+   treatment in web/components/ui/unbacked.tsx. */
+@utility hazard {
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--hold) 9%, transparent) 0 6px,
+    transparent 6px 14px
+  );
 }

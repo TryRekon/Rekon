@@ -2,6 +2,8 @@
 
 **Visual identity:** "Iris" (restyled 2026-07-17 via `/design-system-author`) — graphite neutrals with a violet undertone, one electric iris accent (`--ring`/`--run-b`), Switzer for UI text and JetBrains Mono for numerals. The accent lives on chrome only (active nav, links, focus rings, sparklines); money numerals stay ink. Applied as token-value changes in `web/index.css` — no token renames. Visual reference: `.claude/design-system/reference.html` (+ `mocks/`).
 
+**Neutral ramp temperature (2026-07-23):** The Iris neutral ramp (`--background`, `--card`, `--muted`, `--muted-foreground`, `--border`, `--accent` surface, `--gridline`, `--axis`, `--secondary-ink`) was shifted from cool violet-grey to **warm paper** in both light and dark modes. Token names and the `@theme inline` bridge are unchanged — values only. See `web/index.css` `:root` and `prefers-color-scheme: dark` blocks for current values.
+
 **Entity-link pattern:** in tables and lists, links whose text *is* an entity's name (session, system, tool) render in the accent — `text-ring underline-offset-2 hover:underline`. Inside a clickable row, only the link that shares the row's own destination uses `group-hover:underline` (it underlines on row hover); a link to a *different* entity keeps plain `hover:underline` so row hover doesn't imply the wrong target. Action links with verb labels (e.g. the dashboard's "Rename") and sidebar nav are out of scope. Surrounding data cells stay ink/muted; never apply `text-ring` to numeric or money cells.
 
 **Status:** Extracted from existing code (not authored). This document is a *pointer layer* over the real source of truth — it names and locates tokens and primitives, it does not redefine them. When this doc and the code disagree, the code wins; re-extract.
@@ -31,6 +33,7 @@ All namespaces are defined in `web/index.css`. Raw values live in `:root` (`web/
 | `chart-input` / `chart-output` / `chart-cache-read` / `chart-cache-write` | `bg-chart-*`, `var(--chart-*)` in chart JS | `web/index.css:18-21` | `web/index.css:102-105` | yes |
 | `status-good` / `status-serious` / `status-critical` | `bg-status-*`, `text-status-*`, `border-status-*` | `web/index.css:22-24` | `web/index.css:106-108` | yes (`web/index.css:69-71` — brightened for dark surfaces) |
 | `status-critical-foreground` | `text-status-critical-foreground` (foreground on `bg-status-critical` surfaces) | `web/index.css:25` | `web/index.css:109` | yes (`web/index.css:72-73` — dark ink `#17151f` on the brightened rose fill; the shared `#fafafa` fell to 3.4:1 after the dark `status-critical` brightening) |
+| `hold` (build-state chrome — KTD4) | `text-hold`, `border-hold`, `bg-hold` (incl. `bg-hold/15`); also read via `var(--hold)` by the `hazard` `@utility` and the `Unbacked` frame | `:root` block, declared right after `--status-critical-foreground` (search `--hold`) | `@theme inline` (`--color-hold: var(--hold)`, right after the `status-critical-foreground` bridge) | yes (a touch brighter on dark surfaces, mirroring `--status-serious`) |
 | `flame-neutral` / `flame-defs` / `flame-results` / `flame-user` / `flame-assistant` | **not** Tailwind-class-reachable today (see deviation note below) — consume via `var(--flame-*)` in JS/inline styles only | `web/index.css:29-33` | not bridged | yes |
 | `run-a` / `run-b` | `bg-run-a`/`bg-run-b`, `var(--run-*)` in chart JS | `web/index.css:36-37` | `web/index.css:110-111` | yes |
 | `sidebar` / `sidebar-foreground` / `sidebar-bright` / `sidebar-muted` | `bg-sidebar`, `text-sidebar-foreground`, etc. | `web/index.css:38-41` | `web/index.css:112-115` | partial — only `sidebar` itself has a dark override (`web/index.css:81`); the rest are already dark-appropriate values used in both modes |
@@ -56,7 +59,7 @@ Not every token is overridden in the dark block — `radius`, `font-*`, `animate
 
 ## 3. Primitive Inventory
 
-Every file in `web/components/ui/` (7 total). These are the sanctioned building blocks — see §4 for the import-path convention.
+Every file in `web/components/ui/` (8 total). These are the sanctioned building blocks — see §4 for the import-path convention.
 
 | File | Exports | Variant convention |
 |---|---|---|
@@ -67,6 +70,7 @@ Every file in `web/components/ui/` (7 total). These are the sanctioned building 
 | `web/components/ui/input.tsx` | `Input` | No variants. Wires `aria-[invalid=true]:border-status-critical` directly — pass `aria-invalid` (typically via `FormControl`, see below) rather than styling error state manually. |
 | `web/components/ui/form.tsx` | `Form`, `FormField`, `useFormField`, `FormItem`, `FormLabel`, `FormControl`, `FormMessage` | Not variant-based — a context-wiring layer over `react-hook-form` (`Controller`/`FormProvider`), hand-rolled in the same file-per-primitive style as the rest of `ui/` (explicitly no Radix, no `Slot`; `FormControl` uses `cloneElement` to inject `id`/`aria-invalid`/`aria-describedby` onto its single child instead). Compose as `Form > FormField > FormItem > (FormLabel + FormControl + FormMessage)`. |
 | `web/components/ui/checkbox.tsx` | `Checkbox` | No variants; boolean `checked`/`onCheckedChange` (controlled, button-based `role="checkbox"`, not a native `<input type="checkbox">`). Checked-state styling (`border-foreground bg-foreground text-background`) is inline in the `cn()` call rather than a lookup object, since there are only two states. |
+| `web/components/ui/unbacked.tsx` | `Unbacked`, `ShowScaffoldingContext` | The gap-flag primitive (see §9). `variant`: `block` (default, floating "under construction" badge) \| `inline` (corner cone glyph, no badge); a childless call renders a self-sized dashed placeholder. Not a lookup-object shape — the branch per variant/childless is inline, since each renders a structurally different overlay. `ShowScaffoldingContext` (default `true`) flips the whole effect off (children render plain). |
 
 Every primitive above follows the same shape: a thin wrapper around a native HTML element (or, for `form.tsx`, react-hook-form context) that (a) applies token-only Tailwind classes, (b) accepts `className` and merges it last via `cn()` so callers can extend but the base token classes still win conflicts (see §5), and (c) spreads remaining native props through untyped beyond the variant/size props it owns. New primitives should follow this shape rather than introducing a new component-authoring pattern.
 
@@ -133,6 +137,59 @@ Both are included in `npm run typecheck` (and therefore `npm run verify-ui`), so
 
 ---
 
+## 9. Gap-flag convention (KTD3, KTD4)
+
+Ported from closecoach, adapted to Iris tokens. When a designed element is
+visually present but **not yet backed** by the API, it renders through
+`<Unbacked>` (`web/components/ui/unbacked.tsx`) — an on-theme *under-construction*
+slot — instead of faking data. The point is honesty: no fabricated number is
+ever presented as real, and every gap stays greppable until the backend lands.
+
+**The primitive.** `Unbacked` takes `{ label, note?='Not wired', variant?='block'|'inline', className?, children? }`
+and spreads remaining props. It renders the designed child at its natural size,
+dimmed (`opacity-60 pointer-events-none`), with a layout-neutral overlay painted
+on top:
+- a dashed `--hold` frame drawn *inside* the box via `outline-offset:-1px`, so it
+  never grows the element or shifts neighbors (no layout shift);
+- the `hazard` `@utility` — warm `--hold` diagonal stripes (see below);
+- **block** variant: a floating uppercase `font-mono` "under construction" badge
+  (`text-hold` on `bg-hold/15`) with a small cone glyph;
+- **inline** variant: just a corner cone glyph, no text badge (for icons / chips
+  / inline cells);
+- a **childless** call: a self-sized dashed placeholder box showing the `label`.
+
+All classes are token-only and `className` merges last via `cn()` (§5), so
+`Unbacked` passes the design lints itself. Color is consumed both as utility
+classes (`text-hold`, `bg-hold/15`) and as the sanctioned JS-literal
+`var(--hold)` form (§6) in the `FRAME` outline style.
+
+**The token.** `--hold` is a dedicated amber **build-state chrome** token — see
+§1. It is deliberately NOT a reuse of `--status-serious`: gap-flags signal build
+state, not a data "serious" status, and the Iris rule is that data-status colors
+mean data state (KTD4). Referenced by name only here; read `web/index.css` for
+the value.
+
+**The utility.** `hazard` is an `@utility` in `web/index.css` (after the
+`@layer base` block): a 45° `repeating-linear-gradient` of
+`color-mix(in srgb, var(--hold) 9%, transparent)` for 0–6px then transparent to
+14px — obviously scaffolding without shouting.
+
+**The runtime switch.** `ShowScaffoldingContext` (default `true`) toggles the
+whole treatment: when `false`, every `<Unbacked>` renders its children plain
+("preview as if live"). A global sidebar switch that flips it app-wide is
+deferred follow-up work; default-on is sufficient today.
+
+**The mandatory marker (enforced).** Every `<Unbacked>` call site MUST carry an
+adjacent `// TODO(stitch-gap): <what's missing>` comment naming the exact gap, so
+unbacked visuals stay greppable (`grep -r "TODO(stitch-gap)" web/`). This is
+enforced by `scripts/check-gap-flags.mjs` (run as `npm run lint:gaps` and folded
+into `npm run verify-ui` as step 4): it fails the gate, with `file:line`, on any
+`<Unbacked>` JSX site lacking a `TODO(stitch-gap)` within the preceding ~4 lines
+(the match ignores prose/JSDoc mentions). This mirrors closecoach's
+`design-lint.mjs` gap-flag rule.
+
+---
+
 ## Sources
 
-Extracted from, in this order: `web/index.css` (`:root`, dark-mode override, `@theme inline` blocks), every file in `web/components/ui/`, `web/lib/utils.ts`, `web/pages/landing.tsx` (brand exception), and the chart component set under `web/components/` (JS-literal token convention). This document has no other inputs — it does not introduce tokens, primitives, or conventions beyond what the above files already contain.
+Extracted from, in this order: `web/index.css` (`:root`, dark-mode override, `@theme inline` blocks, and the `hazard` `@utility`), every file in `web/components/ui/` (including `unbacked.tsx`), `web/lib/utils.ts`, `web/pages/landing.tsx` (brand exception), the chart component set under `web/components/` (JS-literal token convention), and `scripts/check-gap-flags.mjs` (gap-flag enforcement, §9). This document has no other inputs — it does not introduce tokens, primitives, or conventions beyond what the above files already contain.

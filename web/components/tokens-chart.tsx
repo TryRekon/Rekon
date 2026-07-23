@@ -5,15 +5,7 @@ import { Button } from './ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 import { formatCompact, formatInt, formatUtcDay } from '../lib/format'
 import { cn } from '../lib/utils'
-
-const SERIES = [
-  { key: 'inputTokens', label: 'Input', color: 'var(--chart-input)' },
-  { key: 'outputTokens', label: 'Output', color: 'var(--chart-output)' },
-  { key: 'cacheReadTokens', label: 'Cache read', color: 'var(--chart-cache-read)' },
-  { key: 'cacheCreationTokens', label: 'Cache write', color: 'var(--chart-cache-write)' },
-] as const
-
-type SeriesKey = (typeof SERIES)[number]['key']
+import { TOKEN_SERIES as SERIES, type TokenSeriesKey as SeriesKey } from '../lib/chart-series'
 
 const DAY_MS = 86_400_000
 const RANGE_DAYS: Record<Exclude<RangeKey, 'all'>, number> = { '7d': 7, '30d': 30, '90d': 90 }

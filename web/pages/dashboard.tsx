@@ -1,20 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { PendingSystem, RangeKey } from '../../shared/api-types'
 import { isUnauthorized } from '../lib/api'
 import { queryKeys, useDashboard } from '../lib/queries'
-import { formatRelative, formatTimestamp, formatUsd, formatUtcDay } from '../lib/format'
+import { formatRelative, formatTimestamp } from '../lib/format'
 import { cn } from '../lib/utils'
 import { Link } from '../lib/router'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { StatStrip, StatTile } from '../components/stat-tile'
+import { BurnMeter } from '../components/burn-meter'
+import { TokenMixStrip } from '../components/token-mix-strip'
 import { TokensChartCard } from '../components/tokens-chart'
-import {
-  DashboardMetricCard,
-  type DashboardCardPoint,
-} from '../design-system/examples/dashboard-card'
 import { ModelsCard } from '../components/models-card'
 import { ProvidersCard } from '../components/providers-card'
 import { ToolsCard } from '../components/tools-card'
@@ -70,10 +68,6 @@ export const DashboardPage = () => {
   const [range, setRange] = useState<RangeKey>('30d')
   const { data, error, isFetching, refetch } = useDashboard(range)
   const queryClient = useQueryClient()
-  const spendSeries: DashboardCardPoint[] = useMemo(
-    () => (data ? data.byDay.map((d) => ({ label: formatUtcDay(d.day), value: d.cost ?? 0 })) : []),
-    [data],
-  )
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     void queryClient.invalidateQueries({ queryKey: queryKeys.systems })
@@ -169,6 +163,16 @@ export const DashboardPage = () => {
             <PendingSystemCard key={s.id} system={s} generatedAt={data.generatedAt} />
           ))}
 
+          {/* GLANCE LAYER — the lit read-at-a-distance summary: spend hero,
+              secondary-KPI strip, token-mix. */}
+          <BurnMeter
+            totals={data.totals}
+            byDay={data.byDay}
+            providers={data.providers}
+            range={data.range}
+            generatedAt={data.generatedAt}
+          />
+
           <StatStrip className="grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
             <StatTile label="Requests" value={data.totals.requests} />
             <StatTile label="Sessions" value={data.totals.sessions} />
@@ -180,16 +184,10 @@ export const DashboardPage = () => {
             <StatTile label="Cache write" value={data.totals.cacheCreationTokens} />
           </StatStrip>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <DashboardMetricCard
-              title="Spend trend"
-              description="Estimated cost per day, list prices"
-              value={formatUsd(data.totals.cost)}
-              series={spendSeries}
-              seriesColor="var(--chart-input)"
-            />
-          </div>
+          <TokenMixStrip totals={data.totals} />
 
+          {/* DENSITY LAYER — the instrument body: trend chart then attribution
+              tables, coarse to fine. */}
           <TokensChartCard byDay={data.byDay} range={data.range} generatedAt={data.generatedAt} />
 
           <section className="grid gap-4 lg:grid-cols-5">
