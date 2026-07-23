@@ -24,8 +24,9 @@
   --chart-cache-read: #dd9a20;
   --chart-cache-write: #a44fd0;
   /* White text painted on top of the saturated chart-color token-mix segments.
-     Legible on all four fills in both themes; identity is never color-alone
-     (each segment is also named in the legend). */
+     Paired with the `mix-seg-label` dark text-shadow so it stays legible even on
+     the lighter fills (amber cache-read, green output); identity is never
+     color-alone (each segment is also named in the legend). */
   --chart-label: #ffffff;
   --status-good: #148a52;
   --status-serious: #dc7333;
@@ -187,4 +188,12 @@
     color-mix(in srgb, var(--hold) 9%, transparent) 0 6px,
     transparent 6px 14px
   );
+}
+
+/* Dark halo behind the white on-bar token-mix segment labels so they stay
+   legible over the lighter chart fills (amber cache-read is only ~2.4:1 with
+   plain white). Token-based (no literal color) so the style lint passes; the
+   near-black --logo-mark is mode-stable, matching the segments' fixed colors. */
+@utility mix-seg-label {
+  text-shadow: 0 1px 1.5px color-mix(in srgb, var(--logo-mark) 62%, transparent);
 }

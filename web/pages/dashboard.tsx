@@ -233,12 +233,12 @@ const KPIS: { label: string; get: (d: DashboardData) => string }[] = [
 ]
 
 const KpiRow = ({ data }: { data: DashboardData }) => (
-  <div className="grid grid-cols-2 border-b border-border md:grid-cols-4 xl:grid-cols-8">
+  // Hairline dividers are drawn by a 1px grid gap over a hairline ground (cells
+  // are bg-card) — correct at every responsive column count and any KPI count,
+  // with no nth-child arithmetic. The region's own border-b closes the bottom.
+  <div className="grid grid-cols-2 gap-px border-b border-border bg-hairline md:grid-cols-4 xl:grid-cols-8">
     {KPIS.map((k) => (
-      <div
-        key={k.label}
-        className="border-hairline px-3.5 py-3 [&:not(:nth-child(2n))]:border-r md:[&:not(:nth-child(4n))]:border-r xl:[&:not(:nth-child(8n))]:border-r [&:nth-child(n+3)]:border-t md:[&:nth-child(n+5)]:border-t xl:[&:nth-child(n+9)]:border-t"
-      >
+      <div key={k.label} className="bg-card px-3.5 py-3">
         <span className="font-sans text-[9.5px] font-semibold tracking-[0.15em] uppercase text-muted-foreground">
           {k.label}
         </span>

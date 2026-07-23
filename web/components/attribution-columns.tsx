@@ -15,16 +15,19 @@ import { Unbacked } from './ui/unbacked'
  * one hairline-divided grid of three columns — Systems by cost · Sessions by
  * cost · Models + Tools — replacing the old stack of full-width cards.
  *
- * Backed live from DashboardData: every cost, message count, model/tool share,
- * and the entity links. NOT backed (rendered inside <Unbacked> with a
- * TODO(stitch-gap)): the per-system 14-day sparkline and the Δ-vs-previous-period
- * column — neither a per-system daily series nor a prior-window aggregate is
- * returned by the dashboard endpoint (see the Backing Ledger).
+ * Backed live from DashboardData: every cost, message count, model/tool share
+ * (of the total, not just the shown top-N), and the entity links. NOT backed:
+ * the per-system "14d" trend and the "Δ prev" column — neither a per-system
+ * daily series nor a prior-window aggregate is returned by the dashboard
+ * endpoint (see the Backing Ledger). Both are flagged as under-construction at
+ * their column header via <Unbacked> + TODO(stitch-gap); their cells render an
+ * honest "—" placeholder rather than a fabricated visual.
  */
 
 const TOP_N = 5
 
-// Total token count across a TokenSums-shaped row.
+// Total token count for a bucket. ToolBucket (unlike ModelBucket) has no cache
+// fields, so those are optional and default to 0 — tool totals are input+output.
 const tokenSum = (t: {
   inputTokens: number
   outputTokens: number
@@ -34,17 +37,9 @@ const tokenSum = (t: {
 
 const costOrNeg = (c: number | null) => (c === null ? -1 : c)
 
-// A fixed placeholder trend shape for the unbacked per-system sparkline. It is
-// deliberately static — no per-system daily series exists to drive it, so it
-// only ever renders inside <Unbacked>.
-const SPARK = [3, 6, 4, 8, 5, 9, 7, 11, 8, 12, 10, 13]
-const MiniSparkline = () => (
-  <svg width="50" height="14" role="img" aria-label="per-system trend (placeholder)">
-    {SPARK.map((v, i) => (
-      <rect key={i} x={i * 4.1} y={14 - v} width="2.6" height={v} fill="var(--axis)" />
-    ))}
-  </svg>
-)
+// A positive scaling denominator: the real peak/total when > 0, else 1 (so
+// RowBar never divides by zero and sub-$1 peaks still scale to full width).
+const posDenom = (n: number) => (n > 0 ? n : 1)
 
 const ColHeader = ({
   label,
@@ -96,6 +91,22 @@ const RowBar = ({ pct, color }: { pct: number; color?: string }) => (
 const tdBase = 'border-b border-hairline px-4 py-2 align-top md:px-[18px]'
 const numCell = cn(tdBase, 'text-right font-mono tabular-nums')
 
+const EmptyRow = ({ colSpan, children }: { colSpan: number; children: ReactNode }) => (
+  <tr>
+    <td colSpan={colSpan} className={cn(tdBase, 'text-center text-muted-foreground')}>
+      {children}
+    </td>
+  </tr>
+)
+
+// Honest "no data yet" placeholder for the header-flagged unbacked columns.
+const Placeholder = () => <span className="text-muted-foreground opacity-50">—</span>
+
+// Name cell: min-w-0 on the section lets tracks honor their fr proportions, and
+// break-words keeps a long space-less name from forcing a track wider (which
+// would shove the vertical hairline dividers).
+const entLink = 'font-medium break-words text-ring underline-offset-2 hover:underline'
+
 export interface AttributionColumnsProps {
   systems: SystemSummary[]
   sessions: SessionSummary[]
@@ -112,28 +123,25 @@ export const AttributionColumns = ({
   const topSystems = [...systems]
     .sort((a, b) => costOrNeg(b.cost) - costOrNeg(a.cost))
     .slice(0, TOP_N)
-  const systemTop = Math.max(...topSystems.map((s) => s.cost ?? 0), 1)
+  const systemTop = posDenom(Math.max(0, ...topSystems.map((s) => s.cost ?? 0)))
 
   const topSessions = [...sessions]
     .sort((a, b) => costOrNeg(b.cost) - costOrNeg(a.cost))
     .slice(0, TOP_N)
 
+  // Shares are of the WHOLE range's tokens (all models / all tools), so a shown
+  // row's % is its true share, not its share of just the displayed top-N.
   const models = [...byModel].sort((a, b) => tokenSum(b) - tokenSum(a)).slice(0, 4)
-  const modelTokenTotal = Math.max(
-    models.reduce((acc, m) => acc + tokenSum(m), 0),
-    1,
-  )
+  const modelTokenTotal = posDenom(byModel.reduce((acc, m) => acc + tokenSum(m), 0))
 
   const tools = [...byTool].sort((a, b) => tokenSum(b) - tokenSum(a)).slice(0, TOP_N)
-  const toolTokenTotal = Math.max(
-    tools.reduce((acc, t) => acc + tokenSum(t), 0),
-    1,
-  )
+  const toolTokenTotal = posDenom(byTool.reduce((acc, t) => acc + tokenSum(t), 0))
 
   // min-height keeps the three vertical hairline dividers equal-length even when
-  // one column has fewer rows (matches the artifact's min-height:300px columns).
+  // one column has fewer rows (matches the artifact's min-height:300px columns);
+  // min-w-0 lets the fr tracks shrink so a long name can't distort the grid.
   const colClass =
-    'border-b border-border md:min-h-[320px] md:border-r md:border-b-0 md:last:border-r-0'
+    'min-w-0 border-b border-border md:min-h-[320px] md:border-r md:border-b-0 md:last:border-r-0'
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-[1.25fr_1.1fr_0.95fr]">
@@ -161,34 +169,28 @@ export const AttributionColumns = ({
           </thead>
           <tbody>
             {topSystems.length === 0 ? (
-              <tr>
-                <td colSpan={4} className={cn(tdBase, 'text-center text-muted-foreground')}>
-                  No systems in this range.
-                </td>
-              </tr>
+              <EmptyRow colSpan={4}>No systems in this range.</EmptyRow>
             ) : (
               topSystems.map((s) => (
                 <tr key={s.id} className="hover:bg-muted">
                   <td className={tdBase}>
                     <Link
                       href={`/systems/${encodeURIComponent(s.id)}`}
-                      className="font-medium text-ring hover:underline"
+                      className={entLink}
                       title={s.name}
                     >
                       {s.name}
                     </Link>
                     <RowBar pct={((s.cost ?? 0) / systemTop) * 100} />
                   </td>
-                  {/* Placeholder cells for the two header-flagged unbacked columns:
-                      dimmed so they read as inactive without a per-cell overlay. */}
-                  <td className={cn(numCell, 'text-right')}>
-                    <span className="inline-flex opacity-40">
-                      <MiniSparkline />
-                    </span>
+                  {/* Cells for the two header-flagged unbacked columns render an
+                      honest "—" placeholder, not fabricated data. */}
+                  <td className={numCell}>
+                    <Placeholder />
                   </td>
                   <td className={cn(numCell, 'font-medium text-foreground')}>{formatUsd(s.cost)}</td>
                   <td className={numCell}>
-                    <span className="text-muted-foreground opacity-50">—</span>
+                    <Placeholder />
                   </td>
                 </tr>
               ))
@@ -210,18 +212,14 @@ export const AttributionColumns = ({
           </thead>
           <tbody>
             {topSessions.length === 0 ? (
-              <tr>
-                <td colSpan={3} className={cn(tdBase, 'text-center text-muted-foreground')}>
-                  No sessions in this range.
-                </td>
-              </tr>
+              <EmptyRow colSpan={3}>No sessions in this range.</EmptyRow>
             ) : (
               topSessions.map((s) => (
                 <tr key={s.id} className="hover:bg-muted">
                   <td className={tdBase}>
                     <Link
                       href={`/sessions/${encodeURIComponent(s.id)}`}
-                      className="font-medium text-ring hover:underline"
+                      className={entLink}
                       title={s.name ?? s.id}
                     >
                       {s.name ?? `${s.id.slice(0, 8)}…`}
@@ -243,16 +241,14 @@ export const AttributionColumns = ({
         <table className="w-full border-collapse text-[12.5px]">
           <tbody>
             {models.length === 0 ? (
-              <tr>
-                <td colSpan={3} className={cn(tdBase, 'text-center text-muted-foreground')}>
-                  No model activity.
-                </td>
-              </tr>
+              <EmptyRow colSpan={3}>No model activity.</EmptyRow>
             ) : (
               models.map((m) => (
                 <tr key={m.model} className="hover:bg-muted">
                   <td className={tdBase}>
-                    <span title={m.model}>{m.model}</span>
+                    <span className="break-words" title={m.model}>
+                      {m.model}
+                    </span>
                     <RowBar pct={(tokenSum(m) / modelTokenTotal) * 100} />
                   </td>
                   <td className={numCell}>{formatPercent(tokenSum(m) / modelTokenTotal)}</td>
@@ -266,16 +262,14 @@ export const AttributionColumns = ({
         <table className="w-full border-collapse text-[12.5px]">
           <tbody>
             {tools.length === 0 ? (
-              <tr>
-                <td colSpan={3} className={cn(tdBase, 'text-center text-muted-foreground')}>
-                  No tool activity.
-                </td>
-              </tr>
+              <EmptyRow colSpan={3}>No tool activity.</EmptyRow>
             ) : (
               tools.map((t) => (
                 <tr key={t.func} className="hover:bg-muted">
                   <td className={tdBase}>
-                    <span title={t.func}>{t.func}</span>
+                    <span className="break-words" title={t.func}>
+                      {t.func}
+                    </span>
                   </td>
                   <td className={cn(tdBase, 'w-[104px]')}>
                     <RowBar pct={(tokenSum(t) / toolTokenTotal) * 100} color="var(--chart-cache-write)" />

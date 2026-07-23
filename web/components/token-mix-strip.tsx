@@ -26,7 +26,7 @@ export const TokenMixStrip = ({ totals }: { totals: DashboardTotals }) => {
               m.share > 0 ? (
                 <div
                   key={m.key}
-                  className="flex items-center overflow-hidden pl-2 font-mono text-[10px] font-semibold whitespace-nowrap text-chart-label"
+                  className="mix-seg-label flex min-w-0 items-center overflow-hidden pl-2 font-mono text-[10px] font-semibold whitespace-nowrap text-chart-label"
                   style={{ width: `${m.share * 100}%`, backgroundColor: m.color }}
                   title={`${m.label} ${formatPercent(m.share)}`}
                 >
