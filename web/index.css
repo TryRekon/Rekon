@@ -9,6 +9,10 @@
   --muted: #f0ede6;
   --muted-foreground: #6b6675;
   --border: #e6e1d8;
+  /* Inner hairline rule for the dense single-surface dashboard grid — subtler
+     than --border (which frames the whole surface). Matches the artifact's
+     `--hair` warm value. */
+  --hairline: #efece4;
   --accent: #efece4;
   --accent-foreground: #17151f;
   --ring: #5f4fd8;
@@ -19,6 +23,11 @@
   --chart-output: #17a877;
   --chart-cache-read: #dd9a20;
   --chart-cache-write: #a44fd0;
+  /* White text painted on top of the saturated chart-color token-mix segments.
+     Paired with the `mix-seg-label` dark text-shadow so it stays legible even on
+     the lighter fills (amber cache-read, green output); identity is never
+     color-alone (each segment is also named in the legend). */
+  --chart-label: #ffffff;
   --status-good: #148a52;
   --status-serious: #dc7333;
   --status-critical: #cf3d5e;
@@ -62,6 +71,8 @@
     --muted: #231f1c;
     --muted-foreground: #9a968e;
     --border: rgba(240, 236, 226, 0.1);
+    /* Subtler than the dark --border so inner rules recede on near-black. */
+    --hairline: rgba(240, 236, 226, 0.05);
     --accent: #231f1c;
     --accent-foreground: #f2f0fa;
     --ring: #8f7dff;
@@ -101,6 +112,7 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-hairline: var(--hairline);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-ring: var(--ring);
@@ -110,6 +122,7 @@
   --color-chart-output: var(--chart-output);
   --color-chart-cache-read: var(--chart-cache-read);
   --color-chart-cache-write: var(--chart-cache-write);
+  --color-chart-label: var(--chart-label);
   --color-status-good: var(--status-good);
   --color-status-serious: var(--status-serious);
   --color-status-critical: var(--status-critical);
@@ -175,4 +188,12 @@
     color-mix(in srgb, var(--hold) 9%, transparent) 0 6px,
     transparent 6px 14px
   );
+}
+
+/* Dark halo behind the white on-bar token-mix segment labels so they stay
+   legible over the lighter chart fills (amber cache-read is only ~2.4:1 with
+   plain white). Token-based (no literal color) so the style lint passes; the
+   near-black --logo-mark is mode-stable, matching the segments' fixed colors. */
+@utility mix-seg-label {
+  text-shadow: 0 1px 1.5px color-mix(in srgb, var(--logo-mark) 62%, transparent);
 }

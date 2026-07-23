@@ -38,7 +38,20 @@ export interface BurnMeterProps {
   generatedAt: number
 }
 
-export const BurnMeter = ({
+// Card-wrapped hero, kept for standalone use. The dashboard composes the bare
+// BurnMeterBody directly into its single hairline surface instead.
+export const BurnMeter = (props: BurnMeterProps) => (
+  <Card>
+    <CardContent className="p-0">
+      <BurnMeterBody {...props} />
+    </CardContent>
+  </Card>
+)
+
+// The hero's inner two-cell grid, with no card chrome of its own so it can sit
+// as a region inside the dashboard's edge-to-edge surface (its own border-b is
+// supplied by the surface wrapper).
+export const BurnMeterBody = ({
   totals,
   byDay,
   providers,
@@ -65,10 +78,9 @@ export const BurnMeter = ({
   }, [providers])
 
   return (
-    <Card>
-      <CardContent className="grid gap-0 p-0 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)]">
-        {/* LEFT — spend read-out */}
-        <div className="flex flex-col gap-3 p-6 md:border-r md:border-border">
+    <div className="grid gap-0 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)]">
+      {/* LEFT — spend read-out */}
+      <div className="flex flex-col gap-3 p-6 md:border-r md:border-hairline">
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             Estimated spend · this period
           </span>
@@ -126,8 +138,7 @@ export const BurnMeter = ({
           </div>
           <SpendChart byDay={byDay} anomaly={anomaly} />
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 
