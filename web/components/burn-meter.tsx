@@ -64,9 +64,9 @@ export const BurnMeter = ({
 
   return (
     <Card>
-      <CardContent className="grid gap-6 p-6 pt-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:items-center">
+      <CardContent className="grid gap-0 p-0 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.25fr)]">
         {/* LEFT — spend read-out */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 p-6 md:border-r md:border-border">
           <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
             Estimated spend · this period
           </span>
@@ -100,26 +100,55 @@ export const BurnMeter = ({
           </div>
         </div>
 
-        {/* RIGHT — anomaly-annotated spend sparkline */}
-        <AnomalySparkline byDay={byDay} anomaly={anomaly} />
+        {/* RIGHT — anomaly-annotated spend chart */}
+        <div className="flex flex-col gap-2 p-5 pt-6">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13px] font-medium leading-snug text-foreground">
+              {anomaly ? (
+                <>
+                  <span className="font-semibold text-status-critical">
+                    {formatUtcDay(anomaly.day)} ran {anomaly.timesMedian}× the median day
+                  </span>{' '}
+                  <span className="text-muted-foreground">— the rest is context</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground">Spend per day — no anomaly this range</span>
+              )}
+            </span>
+            {anomaly && (
+              // TODO(stitch-gap): per-day drill-down view is not built yet
+              <Unbacked variant="inline" label="Inspect day" note="day view not built">
+                <span className="whitespace-nowrap text-[11px] text-ring">inspect day →</span>
+              </Unbacked>
+            )}
+          </div>
+          <SpendChart byDay={byDay} anomaly={anomaly} />
+        </div>
       </CardContent>
     </Card>
   )
 }
 
-const SPARK_H = 132
-const SPARK_PAD_TOP = 22
-const SPARK_PAD_BOTTOM = 6
+const CHART_H = 172
+const M_TOP = 22
+const M_BOTTOM = 22
+const M_RIGHT = 40
+const M_LEFT = 6
 
 type Anomaly = ReturnType<typeof spendAnomaly>
 
-const AnomalySparkline = ({
-  byDay,
-  anomaly,
-}: {
-  byDay: DayBucket[]
-  anomaly: Anomaly
-}) => {
+// Smallest "nice" ceiling (1/2/2.5/5/10 × 10ⁿ) at or above v, for round axis ticks.
+const niceCeil = (v: number): number => {
+  if (v <= 0) return 1
+  const mag = 10 ** Math.floor(Math.log10(v))
+  const n = v / mag
+  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10
+  return step * mag
+}
+
+const axisLabel = (t: number): string => (t >= 10 ? `$${Math.round(t)}` : `$${t.toFixed(1)}`)
+
+const SpendChart = ({ byDay, anomaly }: { byDay: DayBucket[]; anomaly: Anomaly }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
 
@@ -136,87 +165,145 @@ const AnomalySparkline = ({
 
   const values = byDay.map((d) => d.cost ?? 0)
   const hasSpend = values.some((v) => v > 0)
-  const max = Math.max(...values, 0) || 1
+  const rawMax = Math.max(...values, 0)
+  const niceMax = niceCeil(rawMax)
+  const ticks = [0, niceMax / 3, (2 * niceMax) / 3, niceMax]
+
   const anomalyIndex = anomaly ? byDay.findIndex((d) => d.day === anomaly.day) : -1
-  // Recover the median the anomaly was measured against for the reference line.
   const median = anomaly ? anomaly.cost / anomaly.timesMedian : null
 
-  const innerH = SPARK_H - SPARK_PAD_TOP - SPARK_PAD_BOTTOM
-  const baselineY = SPARK_PAD_TOP + innerH
-  const yFor = (v: number) => baselineY - (v / max) * innerH
+  const plotB = CHART_H - M_BOTTOM
+  const plotR = Math.max(width - M_RIGHT, M_LEFT + 1)
+  const innerW = plotR - M_LEFT
+  const innerH = plotB - M_TOP
+  const yFor = (v: number) => plotB - (v / niceMax) * innerH
 
-  const band = byDay.length > 0 ? width / byDay.length : 0
-  const barW = Math.min(14, Math.max(1, band - 2))
-  const anomalyX =
-    anomalyIndex >= 0 ? anomalyIndex * band + band / 2 : 0
+  const band = byDay.length > 0 ? innerW / byDay.length : 0
+  const barW = Math.min(16, Math.max(1, band - 2))
+  const centerX = (i: number) => M_LEFT + i * band + band / 2
+
+  // x-axis: first, middle, last day labels.
+  const xTickIdx =
+    byDay.length > 2 ? [0, Math.floor((byDay.length - 1) / 2), byDay.length - 1] : byDay.map((_, i) => i)
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="w-full">
       {!hasSpend ? (
         <div
           className="flex items-center justify-center text-xs text-muted-foreground"
-          style={{ height: SPARK_H }}
+          style={{ height: CHART_H }}
         >
           No spend recorded in this range.
         </div>
       ) : (
         width > 0 && (
-          <>
-            <svg
-              width={width}
-              height={SPARK_H}
-              role="img"
-              aria-label={
-                anomaly
-                  ? `Spend per day, with a ${anomaly.timesMedian}× median spike on ${formatUtcDay(anomaly.day)}`
-                  : 'Spend per day'
-              }
-            >
-              {/* Faint median reference line — only when an anomaly is flagged. */}
-              {median !== null && (
+          <svg
+            width={width}
+            height={CHART_H}
+            role="img"
+            aria-label={
+              anomaly
+                ? `Spend per day, with a ${anomaly.timesMedian}× median spike on ${formatUtcDay(anomaly.day)}`
+                : 'Spend per day'
+            }
+          >
+            {/* y gridlines + right-edge $ labels */}
+            {ticks.map((t) => (
+              <g key={`y-${t}`}>
                 <line
-                  x1={0}
-                  x2={width}
+                  x1={M_LEFT}
+                  x2={plotR}
+                  y1={yFor(t)}
+                  y2={yFor(t)}
+                  stroke={t === 0 ? 'var(--axis)' : 'var(--gridline)'}
+                  strokeWidth="1"
+                />
+                <text
+                  x={plotR + 6}
+                  y={yFor(t) + 3}
+                  fill="var(--muted-foreground)"
+                  fontSize="9"
+                  fontFamily="var(--font-mono)"
+                >
+                  {axisLabel(t)}
+                </text>
+              </g>
+            ))}
+
+            {/* dashed median reference line + label */}
+            {median !== null && (
+              <>
+                <line
+                  x1={M_LEFT}
+                  x2={plotR}
                   y1={yFor(median)}
                   y2={yFor(median)}
                   stroke="var(--axis)"
                   strokeWidth="1"
                   strokeDasharray="3 3"
                 />
-              )}
-              {byDay.map((d, i) => {
-                const v = d.cost ?? 0
-                const x = i * band + (band - barW) / 2
-                const y = yFor(v)
-                const h = Math.max(0, baselineY - y)
-                const isAnomaly = i === anomalyIndex
-                return (
-                  <rect
-                    key={d.day}
-                    x={x}
-                    y={y}
-                    width={barW}
-                    height={h}
-                    rx={Math.min(2, barW / 2)}
-                    fill={isAnomaly ? 'var(--status-critical)' : 'var(--muted-foreground)'}
-                    opacity={isAnomaly ? 1 : 0.5}
-                  />
-                )
-              })}
-            </svg>
-
-            {/* In-situ anomaly callout, anchored over the spike. */}
-            {anomaly && anomalyIndex >= 0 && (
-              <div
-                className="pointer-events-none absolute top-0 -translate-x-1/2 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.1em] tabular-nums text-status-critical"
-                style={{
-                  left: Math.min(Math.max(anomalyX, 48), Math.max(width - 48, 48)),
-                }}
-              >
-                {formatUtcDay(anomaly.day)} · {anomaly.timesMedian}× median
-              </div>
+                <text
+                  x={M_LEFT + 2}
+                  y={yFor(median) - 5}
+                  fill="var(--muted-foreground)"
+                  fontSize="9.5"
+                  fontFamily="var(--font-mono)"
+                >
+                  median {axisLabel(median)}
+                </text>
+              </>
             )}
-          </>
+
+            {/* bars — muted, anomaly in rose */}
+            {byDay.map((d, i) => {
+              const v = d.cost ?? 0
+              const y = yFor(v)
+              const h = Math.max(0, plotB - y)
+              const isAnomaly = i === anomalyIndex
+              return (
+                <rect
+                  key={d.day}
+                  x={M_LEFT + i * band + (band - barW) / 2}
+                  y={y}
+                  width={barW}
+                  height={h}
+                  rx={Math.min(2, barW / 2)}
+                  fill={isAnomaly ? 'var(--status-critical)' : 'var(--muted-foreground)'}
+                  opacity={isAnomaly ? 1 : 0.32}
+                />
+              )
+            })}
+
+            {/* anomaly value label above its bar */}
+            {anomaly && anomalyIndex >= 0 && (
+              <text
+                x={Math.min(Math.max(centerX(anomalyIndex), 28), plotR - 4)}
+                y={yFor(anomaly.cost) - 5}
+                fill="var(--status-critical)"
+                fontSize="10.5"
+                fontWeight="700"
+                textAnchor="middle"
+                fontFamily="var(--font-mono)"
+              >
+                {formatUsd(anomaly.cost)}
+              </text>
+            )}
+
+            {/* x-axis day labels */}
+            {xTickIdx.map((i) => (
+              <text
+                key={`x-${i}`}
+                x={centerX(i)}
+                y={CHART_H - 6}
+                fill="var(--muted-foreground)"
+                fontSize="9.5"
+                textAnchor={i === 0 ? 'start' : i === byDay.length - 1 ? 'end' : 'middle'}
+                fontFamily="var(--font-mono)"
+              >
+                {formatUtcDay(byDay[i]!.day)}
+              </text>
+            ))}
+          </svg>
         )
       )}
     </div>
