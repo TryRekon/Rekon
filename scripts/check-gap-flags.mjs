@@ -9,7 +9,19 @@
  *
  * The <Unbacked> match runs on a comment-free view of each line, so an
  * <Unbacked> mentioned in prose/JSDoc never trips the rule — only real JSX
- * sites do. The TODO lookback runs on the RAW lines (the marker IS a comment).
+ * sites do. The comment stripper is string-aware: `//` and `/*` inside a
+ * '…' / "…" / `…` literal are NOT treated as comments, so a URL in an attribute
+ * or a stray `/*` inside a string can't blank the line or (worse) poison the
+ * block-comment state for the rest of the file. The TODO lookback runs on the
+ * RAW lines (the marker IS a comment).
+ *
+ * Known limitations (accepted; documented so a future author can grep this):
+ *   - The tag must be written literally as `<Unbacked …>` — an aliased import
+ *     (`import { Unbacked as Gap }`) or an indirectly-rendered component evades
+ *     the `/<Unbacked\b/` match. Use <Unbacked> unaliased.
+ *   - A bare `/*` in JSX TEXT (not inside a string) is still read as a block
+ *     comment. Vanishingly rare in practice; write such text in a `{'…'}`
+ *     expression if it ever comes up.
  *
  * Exit 0 = clean, exit 1 = violations (printed verbatim). Node built-ins only,
  * no dependencies. Mirrors scripts/design-lint.mjs rule 4 from closecoach.
@@ -41,8 +53,10 @@ function sources(dir) {
 
 /**
  * Blank out `//` line comments and `/* *\/` block comments so an <Unbacked>
- * mentioned in a comment never trips the rule. Threads block-comment state
- * across lines via `inBlock`.
+ * mentioned in a comment never trips the rule. String-aware: `//` and `/*`
+ * inside a '…' / "…" / `…` literal are kept verbatim (a stray comment marker in
+ * a string must not truncate the line or leak block-comment state to the rest
+ * of the file). Threads block-comment state across lines via `inBlock`.
  * @param {string} line
  * @param {boolean} inBlock
  * @returns {{ code: string, inBlock: boolean }}
@@ -50,12 +64,32 @@ function sources(dir) {
 function stripComments(line, inBlock) {
   let out = ''
   let i = 0
+  let str = null // active string delimiter: "'" | '"' | '`', or null
   while (i < line.length) {
     if (inBlock) {
       const end = line.indexOf('*/', i)
-      if (end === -1) break
+      if (end === -1) return { code: out, inBlock: true }
       inBlock = false
       i = end + 2
+      continue
+    }
+    const ch = line[i]
+    if (str !== null) {
+      out += ch
+      if (ch === '\\' && i + 1 < line.length) {
+        // keep the escaped character; it can't close the string
+        out += line[i + 1]
+        i += 2
+        continue
+      }
+      if (ch === str) str = null
+      i += 1
+      continue
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      str = ch
+      out += ch
+      i += 1
       continue
     }
     if (line.startsWith('//', i)) break
@@ -64,7 +98,7 @@ function stripComments(line, inBlock) {
       i += 2
       continue
     }
-    out += line[i]
+    out += ch
     i += 1
   }
   return { code: out, inBlock }
@@ -96,8 +130,9 @@ export function findGapViolations(root = SCAN_DIR) {
   return violations
 }
 
-// Standalone CLI mode (skipped when imported by verify-ui.mjs).
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Standalone CLI mode (skipped when imported by verify-ui.mjs, or run in a host
+// with no argv[1] such as `node --input-type=module -e`).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const violations = findGapViolations()
   if (violations.length) {
     console.error(

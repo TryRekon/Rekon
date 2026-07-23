@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import type {
   DashboardTotals,
   DayBucket,
@@ -9,6 +9,8 @@ import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Unbacked } from './ui/unbacked'
 import { cacheHitRatio, paceProjection, spendAnomaly } from '../lib/dashboard-metrics'
+import { niceCeil } from '../lib/nice-scale'
+import { useElementWidth } from '../lib/use-element-width'
 import { formatPercent, formatUsd, formatUtcDay } from '../lib/format'
 
 /**
@@ -137,31 +139,10 @@ const M_LEFT = 6
 
 type Anomaly = ReturnType<typeof spendAnomaly>
 
-// Smallest "nice" ceiling (1/2/2.5/5/10 × 10ⁿ) at or above v, for round axis ticks.
-const niceCeil = (v: number): number => {
-  if (v <= 0) return 1
-  const mag = 10 ** Math.floor(Math.log10(v))
-  const n = v / mag
-  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10
-  return step * mag
-}
-
 const axisLabel = (t: number): string => (t >= 10 ? `$${Math.round(t)}` : `$${t.toFixed(1)}`)
 
 const SpendChart = ({ byDay, anomaly }: { byDay: DayBucket[]; anomaly: Anomaly }) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-
-  useLayoutEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (entry) setWidth(entry.contentRect.width)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  const [containerRef, width] = useElementWidth<HTMLDivElement>()
 
   const values = byDay.map((d) => d.cost ?? 0)
   const hasSpend = values.some((v) => v > 0)
@@ -170,7 +151,9 @@ const SpendChart = ({ byDay, anomaly }: { byDay: DayBucket[]; anomaly: Anomaly }
   const ticks = [0, niceMax / 3, (2 * niceMax) / 3, niceMax]
 
   const anomalyIndex = anomaly ? byDay.findIndex((d) => d.day === anomaly.day) : -1
-  const median = anomaly ? anomaly.cost / anomaly.timesMedian : null
+  // Exact median the ratio was computed against (not back-derived from the
+  // rounded timesMedian), so the reference line sits on the true value.
+  const median = anomaly ? anomaly.median : null
 
   const plotB = CHART_H - M_BOTTOM
   const plotR = Math.max(width - M_RIGHT, M_LEFT + 1)

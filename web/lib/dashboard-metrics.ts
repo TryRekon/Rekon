@@ -4,18 +4,7 @@
  * server-side or test contexts.
  */
 import type { DashboardTotals, DayBucket, RangeKey } from '../../shared/api-types'
-
-// Token series in the fixed display order used by the burn-meter.
-// Labels and var() color references mirror the SERIES constant in
-// web/components/tokens-chart.tsx so the two are kept in sync.
-type TokenKey = 'inputTokens' | 'outputTokens' | 'cacheCreationTokens' | 'cacheReadTokens'
-
-const TOKEN_SERIES: ReadonlyArray<{ key: TokenKey; label: string; color: string }> = [
-  { key: 'inputTokens', label: 'Input', color: 'var(--chart-input)' },
-  { key: 'outputTokens', label: 'Output', color: 'var(--chart-output)' },
-  { key: 'cacheCreationTokens', label: 'Cache write', color: 'var(--chart-cache-write)' },
-  { key: 'cacheReadTokens', label: 'Cache read', color: 'var(--chart-cache-read)' },
-]
+import { TOKEN_SERIES } from './chart-series'
 
 // ─── Pace projection ──────────────────────────────────────────────────────────
 
@@ -23,10 +12,12 @@ const TOKEN_SERIES: ReadonlyArray<{ key: TokenKey; label: string; color: string 
  * Projects the total spend for the current period from the partial elapsed
  * data in byDay.
  *
- * For '30d' the period is the full calendar month containing generatedAt —
- * daysElapsed is the UTC day-of-month and the rate is projected out to
- * daysInMonth, giving a meaningful forward estimate while the month is still
- * in progress.
+ * For '30d' (the default range) the period is the calendar month containing
+ * generatedAt. The server feeds a ROLLING 30-day window, not month-to-date, so
+ * we first restrict byDay to the days that fall inside the current UTC month,
+ * then project that month-to-date sum out to daysInMonth by the UTC
+ * day-of-month. Mixing the rolling-window sum with the day-of-month divisor
+ * (the previous bug) over-projected by up to ~monthLength/dayOfMonth ×.
  *
  * For all other ranges (7d, 90d, all) the historical window has already fully
  * elapsed so no extrapolation is meaningful; projected equals the elapsed sum
@@ -49,8 +40,15 @@ export function paceProjection(
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
     // getUTCDate() is 1-based: on the 1st, daysElapsed = 1 (never 0).
     const daysElapsed = Math.max(1, genDate.getUTCDate())
+    // Restrict to days inside the current UTC month so the month-to-date sum
+    // matches the day-of-month divisor. byDay days are 'YYYY-MM-DD' strings.
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`
+    const monthToDate = byDay.reduce(
+      (acc, d) => (d.day.startsWith(monthPrefix) ? acc + (d.cost ?? 0) : acc),
+      0,
+    )
     return {
-      projected: (elapsedSum / daysElapsed) * daysInMonth,
+      projected: (monthToDate / daysElapsed) * daysInMonth,
       periodLabel: genDate.toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',
@@ -75,44 +73,54 @@ export function paceProjection(
 
 /**
  * Identifies the single highest-spend day if it is at least 2× the median
- * cost of non-zero days.
+ * cost of the OTHER non-zero days.
  *
- * Returns null when byDay is empty, every day has zero/null cost, or no day
- * clears the 2× threshold.  timesMedian is rounded to one decimal place.
+ * The median is taken over the active days EXCLUDING the candidate (the max).
+ * Including the candidate makes an anomaly impossible to detect for small n —
+ * with exactly two active days the median sits at their midpoint, so the ratio
+ * `2·max/(min+max)` can never reach 2 for positive costs (the previous bug).
+ * Excluding the candidate compares "the spike day vs a typical other day",
+ * which is what the callout claims.
+ *
+ * Returns null when there are fewer than two active days, the median of the
+ * rest is zero, or the candidate is under the 2× threshold. `timesMedian` is
+ * rounded to one decimal place for display; `median` is the exact value the
+ * ratio was computed against (so callers can draw the reference line without
+ * re-deriving it from the rounded ratio).
  */
 export function spendAnomaly(
   byDay: DayBucket[],
-): { day: string; cost: number; timesMedian: number } | null {
+): { day: string; cost: number; timesMedian: number; median: number } | null {
   // Collect days that have a positive reported cost.
   const active = byDay
     .filter((d): d is DayBucket & { cost: number } => d.cost !== null && d.cost > 0)
     .map((d) => ({ day: d.day, cost: d.cost }))
 
-  if (active.length === 0) return null
+  // Need the candidate plus at least one other day to form a median-of-rest.
+  if (active.length < 2) return null
 
-  // Median of non-zero day costs.
-  const sorted = [...active].sort((a, b) => a.cost - b.cost)
+  // Candidate = the single highest-cost day.
+  const maxEntry = active.reduce((best, d) => (d.cost > best.cost ? d : best))
+
+  // Median of the remaining days (candidate excluded, one instance removed).
+  const rest = [...active]
+  rest.splice(rest.indexOf(maxEntry), 1)
+  const sorted = rest.map((d) => d.cost).sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
-  const midCost = sorted[mid]?.cost ?? 0
-  const prevCost = sorted[mid - 1]?.cost ?? 0
   const median =
-    sorted.length % 2 === 1
-      ? midCost
-      : (prevCost + midCost) / 2
+    sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
 
-  // Guard: if the median is somehow zero we cannot form a meaningful ratio.
+  // Guard: a zero median cannot form a meaningful ratio.
   if (median <= 0) return null
 
-  // Find the maximum-cost day.
-  const maxEntry = active.reduce((best, d) => (d.cost > best.cost ? d : best))
   const ratio = maxEntry.cost / median
-
   if (ratio < 2) return null
 
   return {
     day: maxEntry.day,
     cost: maxEntry.cost,
     timesMedian: Math.round(ratio * 10) / 10,
+    median,
   }
 }
 
