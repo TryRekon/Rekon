@@ -12,6 +12,16 @@
 
 Per R2, **no hex values are duplicated into this document.** Every token below is documented by name and by pointer (file + line range) into `web/index.css`, never by value. If you need the current value of a token, read the file.
 
+**Screen targets (per-screen pixel source of truth):** this doc + `web/index.css` codify the design *language*; the per-screen *layout* was matched 1:1 against the warm-Iris Claude artifacts below. Note the committed `.claude/design-system/reference.html` + `mocks/` were generated 2026-07-17, **before** the single-surface rebuild — they still show the older card-stack layout. For the current dense single-hairline-surface screens, the artifacts here are canonical. When reworking one of these screens, screenshot-diff the authed page against its artifact (headless-Chrome loop + the `screenshot-verifier` subagent); match layout + tokens, not values (real seed data differs from the mock's aspirational numbers, as expected).
+
+| Screen | Route(s) | Artifact (warm frame) | Shipped in |
+|---|---|---|---|
+| Dashboard | `/` | https://claude.ai/code/artifact/31d56337-a765-4bf6-8709-89ae6a0a29f7 (`#warm`) | #6 (`09a275f`) |
+| System detail | `/systems/:id` | https://claude.ai/code/artifact/546f2215-e96a-4d5c-9510-cc17755e9118 | #7 (`d793e18`) |
+| Session detail | `/sessions/:id` | https://claude.ai/code/artifact/546f2215-e96a-4d5c-9510-cc17755e9118 | #7 (`d793e18`) |
+
+The single-surface idiom shared by all three: one `overflow-hidden rounded-lg border bg-card` surface whose regions are split by hairline rules (no per-section cards/shadows), dense grids drawing dividers via a 1px grid gap over a `bg-hairline` ground. Each artifact is a static frame — when reading its markup, strip the base64 font `data:` blobs first.
+
 ---
 
 ## 1. Token Namespaces
